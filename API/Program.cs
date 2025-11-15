@@ -1,4 +1,6 @@
+using Core.Interfaces;
 using Infrastructure.Data;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +12,7 @@ builder.Services.AddDbContext<StoreContext>(opt =>
 {
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 // builder.Services.AddOpenApi();
 
@@ -24,7 +27,12 @@ var app = builder.Build();
 //app.UseHttpsRedirection();
 
 //app.UseAuthorization();
-
-app.MapControllers();
-
+try { using var scope = app.Services.CreateScope(); 
+    var services = scope.ServiceProvider; 
+    var context = services.GetRequiredService<StoreContext>(); 
+    await context.Database.MigrateAsync(); 
+    await StoreContextSeed.SeedAsync(context); } 
+catch (Exception e) 
+{ Console.WriteLine(e); throw; }
+app.MapControllers(); 
 app.Run();
